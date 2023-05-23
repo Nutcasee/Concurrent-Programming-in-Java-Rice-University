@@ -1,9 +1,15 @@
 package edu.coursera.concurrent;
 
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 /**
  * Wrapper class for two lock-based concurrent list implementations.
  */
 public final class CoarseLists {
+    private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
+
     /**
      * An implementation of the ListSet interface that uses Java locks to
      * protect against concurrent accesses.
