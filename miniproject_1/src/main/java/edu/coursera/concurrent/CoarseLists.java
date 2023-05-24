@@ -7,9 +7,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * Wrapper class for two lock-based concurrent list implementations.
  */
 public final class CoarseLists {
-    private final ReentrantLock lock = new ReentrantLock();
-    private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
-
     /**
      * An implementation of the ListSet interface that uses Java locks to
      * protect against concurrent accesses.
@@ -25,6 +22,7 @@ public final class CoarseLists {
          * TODO Declare a lock for this class to be used in implementing the
          * concurrent add, remove, and contains methods below.
          */
+        private final ReentrantLock lock = new ReentrantLock();
 
         /**
          * Default constructor.
@@ -115,6 +113,7 @@ public final class CoarseLists {
          * TODO Declare a read-write lock for this class to be used in
          * implementing the concurrent add, remove, and contains methods below.
          */
+        private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
 
         /**
          * Default constructor.
