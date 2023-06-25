@@ -10,6 +10,7 @@ public final class BankTransactionsUsingObjectIsolation
     /**
      * {@inheritDoc}
      */
+	
     @Override
     public void issueTransfer(final int amount, final Account src,
             final Account dst) {
@@ -19,10 +20,16 @@ public final class BankTransactionsUsingObjectIsolation
          * BankTransactionsUsingGlobalIsolation. Keep in mind that isolation
          * must be applied to both src and dst.
          */
-        throw new UnsupportedOperationException();
+//        throw new UnsupportedOperationException();
         
         isolated(src, dst, () -> {
             src.performTransfer(amount, dst);
         });
     }
+    
+
+//	private void performTransfer(final int amount, final Account dst) {
+//		
+//	}
+	
 }
