@@ -19,7 +19,8 @@ public final class SieveActor extends Sieve {
      */
     @Override
     public int countPrimes(final int limit) {
-        throw new UnsupportedOperationException();
+//        throw new UnsupportedOperationException();
+    	
     }
 
     /**
@@ -36,7 +37,8 @@ public final class SieveActor extends Sieve {
          */
         @Override
         public void process(final Object msg) {
-            throw new UnsupportedOperationException();
+//            throw new UnsupportedOperationException();
+        	
         }
     }
 }
