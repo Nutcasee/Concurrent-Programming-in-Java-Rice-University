@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import edu.rice.pcdp.Actor;
+import edu.rice.pcdp.PCDP;
 
 /**
  * An actor-based implementation of the Sieve of Eratosthenes.
@@ -23,22 +24,32 @@ public final class SieveActor extends Sieve {
     @Override
     public int countPrimes(final int limit) {
 //        throw new UnsupportedOperationException();
-    	final SieveActorActor actor = new SieveActorActor();
+    	final SieveActorActor actor = new SieveActorActor(2);
 
-        finish(() -> {
+        PCDP.finish(() -> {
             for (int i = 3; i <= limit; i += 2) {
                 actor.send(i);
             }
             actor.send(0);
         });
         
-    	final List<Integer> localPrimes = new ArrayList<Integer>();
-        localPrimes.add(2);
-        for (int i = 3; i <= limit; i += 2) {
-            checkPrime(i, localPrimes);
+     // Sum up the number of local primes from each actor in the chain.
+        int totalPrimes = 0;
+        SieveActorActor currentActor = actor;
+        while (currentActor != null) {
+            totalPrimes += currentActor.numLocalPrimes();
+            currentActor = currentActor.nextActor;
         }
 
-        return localPrimes.size();
+        return totalPrimes;
+        
+//    	final List<Integer> localPrimes = new ArrayList<Integer>();
+//        localPrimes.add(2);
+//        for (int i = 3; i <= limit; i += 2) {
+//            checkPrime(i, localPrimes);
+//        }
+//
+//        return localPrimes.size();
     }
 
     /**
@@ -61,8 +72,8 @@ public final class SieveActor extends Sieve {
     	SieveActorActor(final int localPrime){    	    
     	    this.localPrimes = new int[MAX_LOCAL_PRIMES];
     	    this.localPrimes[0] = localPrime;
-    	    this.numLocalPrimes=1;
-    	    this.nextActor =null;    	    
+    	    this.numLocalPrimes = 1;
+    	    this.nextActor = null;    	    
     	}
     	
     	public SieveActorActor nextActor() {
@@ -73,9 +84,16 @@ public final class SieveActor extends Sieve {
     	    return numLocalPrimes;
     	}
     	
+    	/**
+         * Process a single message sent to this actor.
+         *
+         * TODO complete this method.
+         *
+         * @param msg Received message
+         */
 	    @Override
         public void process(final Object msg) {            
-            final int candidate = (Integer)msg;            
+            final int candidate = (Integer) msg;            
             if(candidate <=0) {        	
 	        	if(nextActor != null) {        	    
 	        	    nextActor.send(msg);        	    
@@ -85,13 +103,13 @@ public final class SieveActor extends Sieve {
 	        	final boolean locallyPrime = isLocallyPrime(candidate);
 	        	if(locallyPrime) {        	    
 	        	    if(numLocalPrimes < MAX_LOCAL_PRIMES) {
-	          		localPrimes[numLocalPrimes] = candidate;
-	        		numLocalPrimes +=1;        		
+		          		localPrimes[numLocalPrimes] = candidate;
+		        		numLocalPrimes +=1;        		
 	        	    }else if(nextActor == null){        		
-	        		nextActor = new SieveActorActor(candidate);
-	        		//nextActor.start();
+		        		nextActor = new SieveActorActor(candidate);
+		        		//nextActor.start();
 	        	    }else {        		
-	        		nextActor.send(msg);
+	        	    	nextActor.send(msg);
 	        	    }        	    
 	        	}
             }
@@ -103,10 +121,11 @@ public final class SieveActor extends Sieve {
             return isPrime[0];
         }
         
-        private void checkPrimeKernel(final int candidate, final boolean[] isPrime,final int startIndex,final int endIndex ) {
-            for(int i=startIndex; i<endIndex;i++) {
-	        	if(candidate % localPrimes[i] ==0) {            	    
-	        	    isPrime[0]=false;
+        private void checkPrimeKernel(final int candidate, final boolean[] isPrime, 
+        		final int startIndex,final int endIndex ) {
+            for(int i = startIndex; i < endIndex; i++) {
+	        	if(candidate % localPrimes[i] == 0) {            	    
+	        	    isPrime[0] = false;
 	        	    //break;            	    
 	        	}            	
             }              
