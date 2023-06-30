@@ -98,6 +98,7 @@ public final class SieveActor extends Sieve {
 	        	if(nextActor != null) {        	    
 	        	    nextActor.send(msg);        	    
 	        	}
+	        	return;
 	        	//exit();        	
             }else {        	
 	        	final boolean locallyPrime = isLocallyPrime(candidate);
