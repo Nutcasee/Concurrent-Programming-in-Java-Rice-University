@@ -114,6 +114,9 @@ public final class ParBoruvka extends AbstractBoruvka<ParBoruvka.ParComponent> {
          * component.
          */
         public boolean isDead = false;
+        
+        // public, private, protected... choose one, plz...
+        public final  ReentrantLock lock = new ReentrantLock();
 
         /**
          * Constructor.
