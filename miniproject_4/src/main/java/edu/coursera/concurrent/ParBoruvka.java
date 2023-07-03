@@ -16,6 +16,9 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public final class ParBoruvka extends AbstractBoruvka<ParBoruvka.ParComponent> {
 
+	final int numThreads = numWorkerThreads();
+	final Thread[] threads = new Thread[numThreads];
+	final ParComponent[] result = new ParComponent[1];
     /**
      * Constructor.
      */
@@ -28,56 +31,62 @@ public final class ParBoruvka extends AbstractBoruvka<ParBoruvka.ParComponent> {
      */
     @Override
     public void computeBoruvka(final Queue<ParComponent> nodesLoaded,
-            final SolutionToBoruvka<ParComponent> solution) {
-//        throw new UnsupportedOperationException();
-    	ParComponent loopNode = null;
+                               final SolutionToBoruvka<ParComponent> solution) {
 
-        while((loopNode = nodesLoaded.poll()) != null) {
-            if (!loopNode.lock.tryLock()) {
-                continue;  // Optimistic Concurrency :: Current polled node is locked ,
-                // continue and poll another node
-            }
+    	for (int i = 0; i < numThreads; i++) {
+    		threads[i] = new Thread(() -> {
+    			
+    			ParComponent loopNode = null;
+    			
+    	        while((loopNode = nodesLoaded.poll()) != null) {
+    	            if (!loopNode.lock.tryLock()) {
+    	                continue;  // Optimistic Concurrency :: Current polled node is locked ,
+    	                // continue and poll another node
+    	            }
+    	
+    	            if (loopNode.isDead) {
+    	                loopNode.lock.unlock();
+    	                continue;
+    	            }
+    	
+    	            final Edge<ParComponent> edge = loopNode.getMinEdge();
+    	            if (edge == null) {
+    	                // No Edge  -- > all nodes merged to MST graph
+    	                solution.setSolution(loopNode);
+    	                break;
+    	            }
+    	
+    	            final ParComponent other = edge.getOther(loopNode);
+    	
+    	            // Try to get lock on Other node so no other thread is also Merging with this Node
+    	            if (!other.lock.tryLock()) {
+    	                loopNode.lock.unlock();
+    	                nodesLoaded.add(loopNode);
+    	                continue;
+    	            }
+    	            // Acquired lock on Other node with Min weight
+    	            if (other.isDead) {
+    	                // Other is already Processed
+    	                other.lock.unlock(); // Release Both Locks
+    	                loopNode.lock.unlock();
+    	                continue;
+    	            }
+    	
+    	            other.isDead = true;
+    	            // Other Node was not Dead --> Both Nodes of edge are locked --> Merge
+    	            loopNode.merge(other, edge.weight());
+    	
+    	            //Release Resources
+    	            loopNode.lock.unlock();
+    	            other.lock.unlock();
+    	
+    	            // Add merged Node to Queue
+    	            nodesLoaded.add(loopNode);
+    	        }
 
-            if (loopNode.isDead) {
-                loopNode.lock.unlock();
-                continue;
-            }
-
-            final Edge<ParComponent> edge = loopNode.getMinEdge();
-            if (edge == null) {
-                // No Edge  -- > all nodes merged to MST graph
-                solution.setSolution(loopNode);
-                break;
-            }
-
-            final ParComponent other = edge.getOther(loopNode);
-
-            // Try to get lock on Other node so no other thread is also Merging with this Node
-            if (!other.lock.tryLock()) {
-                loopNode.lock.unlock();
-                nodesLoaded.add(loopNode);
-                continue;
-            }
-            // Acquired lock on Other node with Min weight
-            if (other.isDead) {
-                // Other is already Processed
-                other.lock.unlock(); // Release Both Locks
-                loopNode.lock.unlock();
-                continue;
-            }
-
-            other.isDead = true;
-            // Other Node was not Dead --> Both Nodes of edge are locked --> Merge
-            loopNode.merge(other, edge.weight());
-
-            //Release Resources
-            loopNode.lock.unlock();
-            other.lock.unlock();
-
-            // Add merged Node to Queue
-            nodesLoaded.add(loopNode);
-        }
-    }
+    		})
+    	}
+	}
 
     /**
      * ParComponent represents a single component in the graph. A component may
@@ -114,15 +123,14 @@ public final class ParBoruvka extends AbstractBoruvka<ParBoruvka.ParComponent> {
          * component.
          */
         public boolean isDead = false;
-        
-        // public, private, protected... choose one, plz...
-        public final  ReentrantLock lock = new ReentrantLock();
 
         /**
          * Constructor.
          *
          * @param setNodeId ID for this node.
          */
+
+        final  ReentrantLock lock = new ReentrantLock();
         public ParComponent(final int setNodeId) {
             super();
             this.nodeId = setNodeId;
@@ -199,9 +207,9 @@ public final class ParBoruvka extends AbstractBoruvka<ParBoruvka.ParComponent> {
                 while (i < edges.size()) {
                     final Edge<ParComponent> e = edges.get(i);
                     if ((e.fromComponent() != this
-                                && e.fromComponent() != other)
+                            && e.fromComponent() != other)
                             || (e.toComponent() != this
-                                && e.toComponent() != other)) {
+                            && e.toComponent() != other)) {
                         break;
                     }
                     i++;
@@ -209,19 +217,19 @@ public final class ParBoruvka extends AbstractBoruvka<ParBoruvka.ParComponent> {
                 while (j < other.edges.size()) {
                     final Edge<ParComponent> e = other.edges.get(j);
                     if ((e.fromComponent() != this
-                                && e.fromComponent() != other)
+                            && e.fromComponent() != other)
                             || (e.toComponent() != this
-                                && e.toComponent() != other)) {
+                            && e.toComponent() != other)) {
                         break;
                     }
                     j++;
                 }
 
                 if (j < other.edges.size() && (i >= edges.size()
-                            || edges.get(i).weight()
-                            > other.edges.get(j).weight())) {
+                        || edges.get(i).weight()
+                        > other.edges.get(j).weight())) {
                     newEdges.add(other.edges.get(j++).replaceComponent(other,
-                                this));
+                            this));
                 } else if (i < edges.size()) {
                     newEdges.add(edges.get(i++).replaceComponent(other, this));
                 }
@@ -291,7 +299,7 @@ public final class ParBoruvka extends AbstractBoruvka<ParBoruvka.ParComponent> {
          * @param w Weight of this edge.
          */
         public ParEdge(final ParComponent from, final ParComponent to,
-                final double w) {
+                       final double w) {
             fromComponent = from;
             toComponent = to;
             weight = w;
@@ -357,7 +365,7 @@ public final class ParBoruvka extends AbstractBoruvka<ParBoruvka.ParComponent> {
          * {@inheritDoc}
          */
         public ParEdge replaceComponent(final ParComponent from,
-                final ParComponent to) {
+                                        final ParComponent to) {
             if (fromComponent == from) {
                 fromComponent = to;
             }
